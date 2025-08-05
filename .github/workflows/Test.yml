@@ -1,0 +1,61 @@
+name: Export APK using Shinobu Godot 4 (Built from Source)
+
+on: workflow_dispatch:
+
+jobs: build-and-export: runs-on: ubuntu-latest
+
+steps:
+  - name: 📅 Checkout Project Heartbeat
+    uses: actions/checkout@v4
+
+  - name: 👀 Checkout Shinobu Godot 4 Engine
+    uses: actions/checkout@v4
+    with:
+      repository: EIRTeam/shinobu
+      ref: shinobu_gd4
+      path: shinobu
+
+  - name: ⚖️ Install Dependencies for SCons Build
+    run: |
+      sudo apt-get update
+      sudo apt-get install -y scons pkg-config libx11-dev libxcursor-dev libxinerama-dev libgl1-mesa-dev libglu1-mesa-dev libasound2-dev libpulse-dev libfreetype6-dev libudev-dev libxi-dev libxrandr-dev yasm
+
+  - name: 🛠️ Build Shinobu Godot 4 Editor (Linux)
+    run: |
+      cd shinobu
+      scons platform=linuxbsd target=editor -j$(nproc)
+      cp bin/godot.linuxbsd.editor.* ../godot
+
+  - name: 🔄 Download Android Export Templates (Godot 4.4.1)
+    run: |
+      mkdir -p ~/.local/share/godot/templates/4.4.stable
+      wget https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz -O template.tpz
+      unzip template.tpz -d ~/.local/share/godot/templates/4.4.stable
+
+  - name: ⚙️ Set Up Godot Editor Settings
+    run: |
+      mkdir -p ~/.config/godot && mkdir -p $HOME/android-sdk
+      cat <<EOF > ~/.config/godot/editor_settings-4.tres
+      [gd_resource type="EditorSettings" format=3]
+      export/android/android_sdk_path = "$HOME/android-sdk"
+      export/android/debug_keystore = "$HOME/android-sdk/debug.keystore"
+      EOF
+
+  - name: 🔐 Generate Debug Keystore
+    run: |
+      keytool -genkey -v -keystore $HOME/android-sdk/debug.keystore \
+        -storepass android -alias androiddebugkey -keypass android \
+        -dname "CN=Android Debug,O=Android,C=US" \
+        -keyalg RSA -keysize 2048 -validity 10000
+
+  - name: 📲 Export APK
+    run: |
+      chmod +x ./godot
+      ./godot --headless --path . --export-release "Android" build.apk
+
+  - name: 📤 Upload APK Artifact
+    uses: actions/upload-artifact@v4
+    with:
+      name: Project-Heartbeat-ShinobuGd4-APK
+      path: build.apk
+
