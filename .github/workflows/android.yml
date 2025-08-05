@@ -1,1 +1,73 @@
 
+name: Export Android APK using Shinobu Engine
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Project Heartbeat
+        uses: actions/checkout@v4
+
+      - name: 📦 Download & Extract Shinobu Engine
+        run: |
+          wget https://github.com/EIRTeam/shinobu/releases/download/0.13/engine.zip -O engine.zip
+          unzip engine.zip
+          chmod +x godot.x11.opt.tools.64
+          mv godot.x11.opt.tools.64 godot
+
+      - name: 🧪 Run Project Heartbeat Headless
+        run: |
+          ./godot --headless --path . --quit || echo "Ran with warnings"
+
+      - name: 📥 Download Android Export Templates (4.4.1)
+        run: |
+          mkdir -p ~/.local/share/godot/templates/4.4.stable
+          wget --progress=bar:force \
+            https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz \
+            -O template.tpz
+          
+          # Check if the file is a .zip file before unzipping
+          file template.tpz
+          
+          # Unzip if the template is actually a zip archive
+          unzip -q template.tpz -d ~/.local/share/godot/templates/4.4.stable || echo "Template is not a zip file, attempting alternative extraction method"
+          
+          # If the file is a tar archive, extract it
+          tar -xf template.tpz -C ~/.local/share/godot/templates/4.4.stable || echo "Template extraction failed, please verify the file format."
+
+      - name: ⚙️ Configure Godot Editor Settings
+        run: |
+          mkdir -p ~/.config/godot
+          cat <<EOF > ~/.config/godot/editor_settings-4.tres
+          [gd_resource type="EditorSettings" load_steps=2 format=3]
+
+          [resource]
+          export/android/android_sdk_path = "/usr/lib/android-sdk"
+          export/android/debug_keystore = "/usr/lib/android-sdk/debug.keystore"
+          EOF
+
+      - name: 🔧 Install Android SDK & Keystore
+        run: |
+          sudo apt update
+          sudo apt install -y openjdk-17-jdk android-sdk zipalign apksigner
+          mkdir -p /usr/lib/android-sdk
+          keytool -genkey -v -keystore /usr/lib/android-sdk/debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -keyalg RSA -keysize 2048 -validity 10000
+
+      - name: 📲 Export Android APK
+        run: |
+          ./godot --headless --path . --export-release "Android" build.apk
+
+      - name: 📤 Upload APK Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Project-Heartbeat-APK
+          path: build.apk
