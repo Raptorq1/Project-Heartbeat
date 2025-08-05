@@ -13,7 +13,7 @@ jobs:
 
       - name: 📥 Download Precompiled Shinobu Engine
         run: |
-          wget https://github.com/EIRTeam/shinobu/releases/download/latest/engine.zip -O engine.zip
+          wget https://github.com/Raptorq1/shinobu/releases/download/Gd/engine.zip -O engine.zip
           unzip engine.zip
           chmod +x godot*
 
@@ -46,5 +46,5 @@ jobs:
       - name: 📤 Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Project-Heartbeat-Shinobu-APK
+          name: Project-Heartbeat-Precompiled-APK
           path: build.apk
