@@ -1,81 +1,47 @@
-name: Export APK using Shinobu Godot 4 Engine
+name: Export APK using Precompiled Shinobu Godot 4
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-and-export:
+  export:
     runs-on: ubuntu-latest
-    env:
-      ANDROID_NDK_VERSION: r21e
-      ANDROID_NDK_HOME: ${{ github.workspace }}/android-ndk
 
     steps:
       - name: 📥 Checkout Project Heartbeat
         uses: actions/checkout@v4
 
-      - name: 🧬 Clone Shinobu Engine (Godot 4 branch)
+      - name: 📥 Download Precompiled Shinobu Engine
         run: |
-          git clone -b shinobu_gd4 https://github.com/EIRTeam/shinobu.git shinobu
+          wget https://github.com/EIRTeam/shinobu/releases/download/latest/engine.zip -O engine.zip
+          unzip engine.zip
+          chmod +x godot*
 
-      - name: 🛠 Install build tools and dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y scons pkg-config libx11-dev libxcursor-dev libxinerama-dev libgl1-mesa-dev libglu1-mesa-dev libpulse-dev libxi-dev libxrandr-dev libxss-dev openjdk-17-jdk android-sdk zipalign apksigner
-
-      - name: 🛠 Build Shinobu Editor (Linux)
-        working-directory: shinobu
-        run: |
-          scons platform=linuxbsd tools=yes target=editor -j$(nproc)
-          cp bin/godot.linuxbsd.editor.x86_64 ../godot
-          chmod +x ../godot
-
-      - name: 🧪 Headless Test Run (Project Heartbeat)
-        run: |
-          ./godot --headless --path . --quit || echo "Headless test completed"
-
-      - name: 📦 Download Android NDK
-        run: |
-          wget https://dl.google.com/android/repository/android-ndk-${ANDROID_NDK_VERSION}-linux-x86_64.zip -O ndk.zip
-          unzip ndk.zip
-          mv android-ndk-${ANDROID_NDK_VERSION} android-ndk
-
-      - name: 🛠 Build Android Export Template (arm64)
-        working-directory: shinobu
-        run: |
-          scons platform=android target=template_release android_arch=arm64v8 tools=no use_lto=yes -j$(nproc) ANDROID_NDK_ROOT=$ANDROID_NDK_HOME
-
-      - name: 📥 Download Android Export Templates (Godot 4.4.1)
+      - name: 📦 Download Android Export Templates (Godot 4.4.1)
         run: |
           mkdir -p ~/.local/share/godot/templates/4.4.stable
-          wget --progress=bar:force \
-            https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz \
-            -O template.tpz
+          wget https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz -O template.tpz
           tar -xf template.tpz -C ~/.local/share/godot/templates/4.4.stable
 
-      - name: 🧬 Inject Shinobu Android Binary
+      - name: ⚙️ Set Up Godot Editor Settings
         run: |
-          cp shinobu/bin/libgodot.android.template_release.arm64v8.so ~/.local/share/godot/templates/4.4.stable/android_source/template/libs/arm64-v8a/libgodot.so
-
-      - name: ⚙️ Configure Godot export settings
-        run: |
-          mkdir -p ~/.config/godot && mkdir -p "$HOME/android-sdk"
+          mkdir -p ~/.config/godot && mkdir -p $HOME/android-sdk
           cat <<EOF > ~/.config/godot/editor_settings-4.tres
-          [gd_resource type="EditorSettings" format=3 load_steps=2]
+          [gd_resource type="EditorSettings" format=3]
           export/android/android_sdk_path = "$HOME/android-sdk"
           export/android/debug_keystore = "$HOME/android-sdk/debug.keystore"
           EOF
 
-      - name: 🔧 Install Android SDK & generate debug keystore
+      - name: 🔐 Generate Android Debug Keystore
         run: |
-          keytool -genkey -v -keystore "$HOME/android-sdk/debug.keystore" \
+          keytool -genkey -v -keystore $HOME/android-sdk/debug.keystore \
             -storepass android -alias androiddebugkey -keypass android \
             -dname "CN=Android Debug,O=Android,C=US" \
             -keyalg RSA -keysize 2048 -validity 10000
 
-      - name: 📲 Export Android APK using Shinobu engine
+      - name: 📲 Export Android APK
         run: |
-          ./godot --headless --path . --export-release "Android" build.apk
+          ./godot* --headless --path . --export-release "Android" build.apk
 
       - name: 📤 Upload APK Artifact
         uses: actions/upload-artifact@v4
