@@ -1,6 +1,9 @@
 name: Export Android APK using Shinobu Engine
 
 on:
+  push:
+    branches:
+      - '**'  # Run on all branches
   workflow_dispatch:
 
 jobs:
@@ -35,6 +38,34 @@ jobs:
         run: |
           mkdir -p ~/.config/godot
           cat <<EOF > ~/.config/godot/editor_settings-4.tres
+          [gd_resource type="EditorSettings" load_steps=2 format=3]
+
+          [resource]
+          export/android/android_sdk_path = "${HOME}/android-sdk"
+          export/android/debug_keystore = "${HOME}/android-sdk/debug.keystore"
+          EOF
+
+      - name: 🔧 Install Android SDK & Generate Debug Keystore
+        run: |
+          sudo apt update
+          sudo apt install -y openjdk-17-jdk android-sdk zipalign apksigner
+          mkdir -p $HOME/android-sdk
+          keytool -genkey -v -keystore $HOME/android-sdk/debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -keyalg RSA -keysize 2048 -validity 10000
+
+      - name: 📲 Export Android APK
+        run: |
+          ./godot --headless --path . --export-release "Android" build.apk
+
+      - name: 📤 Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Project-Heartbeat-APK
+          path: build.apk          cat <<EOF > ~/.config/godot/editor_settings-4.tres
           [gd_resource type="EditorSettings" load_steps=2 format=3]
 
           [resource]
