@@ -21,7 +21,7 @@ jobs:
         run: |
           mkdir -p ~/.local/share/godot/templates/4.4.stable
           wget https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz -O template.tpz
-          tar -xf template.tpz -C ~/.local/share/godot/templates/4.4.stable
+          unzip template.tpz -d ~/.local/share/godot/templates/4.4.stable
 
       - name: ⚙️ Set Up Godot Editor Settings
         run: |
