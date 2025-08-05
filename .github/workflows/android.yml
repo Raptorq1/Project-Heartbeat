@@ -1,58 +1,65 @@
-name: Build & Export Android APK (Shinobu Godot 4)
+name: Export Android APK using Shinobu v0.13
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-and-export:
+  export:
     runs-on: ubuntu-latest
-    env:
-      ANDROID_NDK_VERSION: r21e
-      ANDROID_NDK_HOME: ${{ github.workspace }}/android-ndk
 
     steps:
-      - name: 📥 Checkout Shinobu (Godot 4 branch)
+      - name: 📥 Checkout Project Heartbeat
+        uses: actions/checkout@v4
+
+      - name: 📦 Download and Extract Shinobu Engine v0.13
         run: |
-          git clone -b shinobu_gd4 https://github.com/EIRTeam/shinobu.git shinobu
-      - name: 🛠 Build Shinobu engine (Linux)
-        working-directory: shinobu
+          wget https://github.com/EIRTeam/shinobu/releases/download/0.13/engine.zip -O engine.zip
+          unzip engine.zip
+          chmod +x godot.x11.opt.tools.64
+          mv godot.x11.opt.tools.64 godot
+
+      - name: 🧪 Test Run with Shinobu
+        run: |
+          ./godot --headless --path . --quit || echo "Headless test completed"
+
+      - name: 📥 Download Android Export Templates (4.4.1)
+        run: |
+          mkdir -p ~/.local/share/godot/templates/4.4.stable
+          wget --progress=bar:force \
+            https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz \
+            -O template.tpz
+          unzip -q template.tpz -d ~/.local/share/godot/templates/4.4.stable || echo "Attempted unzip"
+          tar -xf template.tpz -C ~/.local/share/godot/templates/4.4.stable || echo "Attempted tar"
+
+      - name: ⚙️ Configure Godot Editor Settings
+        run: |
+          mkdir -p ~/.config/godot
+          cat <<EOF > ~/.config/godot/editor_settings-4.tres
+          [gd_resource type="EditorSettings" load_steps=2 format=3]
+
+          [resource]
+          export/android/android_sdk_path = "${HOME}/android-sdk"
+          export/android/debug_keystore = "${HOME}/android-sdk/debug.keystore"
+          EOF
+
+      - name: 🔧 Install Android SDK & Generate Keystore
         run: |
           sudo apt update
-          sudo apt install -y scons pkg-config libx11-dev libxcursor-dev libxinerama-dev libgl1-mesa-dev libglu1-mesa-dev libpulse-dev libxi-dev libxrandr-dev libxss-dev
-          scons platform=linuxbsd tools=yes target=release_debug -j$(nproc)
-          cp bin/godot.linuxbsd.opt.tools.64 ../godot
-          chmod +x ../godot
-      - name: 🧪 Run headless test (Project Heartbeat)
-        working-directory: .
-        run: |
-          ./godot --headless --path . --quit || echo "Ran with warnings"
-      - name: 📦 Download Android SDK & JDK
-        run: |
           sudo apt install -y openjdk-17-jdk android-sdk zipalign apksigner
-          wget https://dl.google.com/android/repository/android-ndk-${ANDROID_NDK_VERSION}-linux-x86_64.zip -O ndk.zip
-          unzip ndk.zip && mv android-ndk-${ANDROID_NDK_VERSION} android-ndk
-      - name: 🛠 Build Android export template
-        working-directory: shinobu
+          mkdir -p $HOME/android-sdk
+          keytool -genkey -v -keystore $HOME/android-sdk/debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -keyalg RSA -keysize 2048 -validity 10000
+
+      - name: 📲 Export Android APK
         run: |
-          scons platform=android target=template_release android_arch=arm64v8 tools=no use_lto=yes -j$(nproc) ANDROID_NDK_ROOT=$ANDROID_NDK_HOME
-      - name: 📥 Download Godot 4.4.1 export template structure
-        run: |
-          wget --progress=bar:force https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz -O template.tpz
-          mkdir -p templates && tar -xf template.tpz -C templates
-      - name: 🧬 Inject Shinobu-built libgodot.so
-        run: |
-          cp shinobu/bin/libgodot.android.template_release.arm64v8.so templates/android_source/template/libs/arm64-v8a/libgodot.so
-      - name: 📂 Copy Project Heartbeat into template
-        run: |
-          mkdir -p templates/android_source/template/assets
-          cp -r . templates/android_source/template/assets/
-      - name: 📲 Build APK via Gradle
-        working-directory: templates/android_source/template
-        run: |
-          chmod +x gradlew
-          ./gradlew generateGodotRelease
+          ./godot --headless --path . --export-release "Android" build.apk
+
       - name: 📤 Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Project-Heartbeat-APK
-          path: build/outputs/apk/release/godot-release.apk
+          path: build.apk
