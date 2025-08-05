@@ -22,19 +22,47 @@ jobs:
         run: |
           ./godot --headless --path . --quit || echo "Ran with warnings"
 
-      - name: 📥 Download Android Export Templates (4.4.1)
+      - name: 📥 Download Android Export Templates (4.4.1 from GitHub)
         run: |
           mkdir -p ~/.local/share/godot/templates/4.4.stable
           wget --progress=bar:force \
             https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz \
             -O template.tpz
-          
-          # Check if the file is a .zip file before unzipping
-          file template.tpz
-          
-          # Unzip if the template is actually a zip archive
-          unzip -q template.tpz -d ~/.local/share/godot/templates/4.4.stable || echo "Template is not a zip file, attempting alternative extraction method"
-          
+          unzip -q template.tpz -d ~/.local/share/godot/templates/4.4.stable || echo "Attempted unzip"
+          tar -xf template.tpz -C ~/.local/share/godot/templates/4.4.stable || echo "Attempted tar"
+
+      - name: ⚙️ Configure Godot Editor Settings
+        run: |
+          mkdir -p ~/.config/godot
+          cat <<EOF > ~/.config/godot/editor_settings-4.tres
+          [gd_resource type="EditorSettings" load_steps=2 format=3]
+
+          [resource]
+          export/android/android_sdk_path = "${HOME}/android-sdk"
+          export/android/debug_keystore = "${HOME}/android-sdk/debug.keystore"
+          EOF
+
+      - name: 🔧 Install Android SDK & Generate Debug Keystore
+        run: |
+          sudo apt update
+          sudo apt install -y openjdk-17-jdk android-sdk zipalign apksigner
+          mkdir -p $HOME/android-sdk
+          keytool -genkey -v -keystore $HOME/android-sdk/debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -keyalg RSA -keysize 2048 -validity 10000
+
+      - name: 📲 Export Android APK
+        run: |
+          ./godot --headless --path . --export-release "Android" build.apk
+
+      - name: 📤 Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Project-Heartbeat-APK
+          path: build.apk          
           # If the file is a tar archive, extract it
           tar -xf template.tpz -C ~/.local/share/godot/templates/4.4.stable || echo "Template extraction failed, please verify the file format."
 
