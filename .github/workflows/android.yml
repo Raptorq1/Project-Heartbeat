@@ -52,7 +52,7 @@ jobs:
           chmod +x gradlew
           ./gradlew generateGodotRelease
       - name: 📤 Upload APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Project-Heartbeat-APK
           path: build/outputs/apk/release/godot-release.apk
