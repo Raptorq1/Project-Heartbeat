@@ -19,12 +19,13 @@ jobs:
           distribution: 'temurin'
           java-version: 11
 
-      - name: Install Android SDK
+      - name: Install Android SDK (Command Line Tools Only)
         uses: android-actions/setup-android@v3
         with:
-          api-level: 33                   # or whichever level you target
-          target: android-33
-          build-tools: "33.0.2"
+          packages: |
+            platform-tools
+            platforms;android-33
+            build-tools;33.0.2
 
       - name: Accept Android SDK Licenses
         run: yes | sdkmanager --licenses
@@ -47,31 +48,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Project-Heartbeat-Android-APK
-          path: build/android/ProjectHeartbeat.apk          unzip template.tpz -d ~/.local/share/godot/templates/4.4.stable
-
-      - name: ⚙️ Set Up Godot Editor Settings
-        run: |
-          mkdir -p ~/.config/godot && mkdir -p $HOME/android-sdk
-          cat <<EOF > ~/.config/godot/editor_settings-4.tres
-          [gd_resource type="EditorSettings" format=3]
-          export/android/android_sdk_path = "$HOME/android-sdk"
-          export/android/debug_keystore = "$HOME/android-sdk/debug.keystore"
-          EOF
-
-      - name: 🔐 Generate Debug Keystore
-        run: |
-          keytool -genkey -v -keystore $HOME/android-sdk/debug.keystore \
-            -storepass android -alias androiddebugkey -keypass android \
-            -dname "CN=Android Debug,O=Android,C=US" \
-            -keyalg RSA -keysize 2048 -validity 10000
-
-      - name: 📲 Export Android APK
-        run: |
-          chmod +x ./godot
-          ./godot --headless --path . --export-release "Android" build.apk
-
-      - name: 📤 Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Project-Heartbeat-ShinobuGd4-APK
-          path: build.apk
+          path: build/android/ProjectHeartbeat.apk
