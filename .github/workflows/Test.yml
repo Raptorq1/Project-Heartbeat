@@ -19,23 +19,28 @@ jobs:
           distribution: 'temurin'
           java-version: 17
 
-      - name: Install Android SDK + Build Tools
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: 11076708 # latest stable
-          packages: |
-            platform-tools
-            platforms;android-33
-            build-tools;33.0.2
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y wget unzip scons zip build-essential
 
-      - name: Accept Android SDK Licenses
-        run: yes | sdkmanager --licenses || true
-
-      - name: Install build tools
-        run: sudo apt-get update && sudo apt-get install -y build-essential scons zip
+      - name: Install Android SDK manually
+        run: |
+          mkdir -p $HOME/android-sdk
+          cd $HOME/android-sdk
+          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+          unzip cmdline-tools.zip
+          mkdir -p cmdline-tools/latest
+          mv cmdline-tools/* cmdline-tools/latest/
+          export ANDROID_HOME=$HOME/android-sdk
+          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
       - name: Build Shinobu Engine (Android)
+        env:
+          ANDROID_HOME: ${{ github.workspace }}/../android-sdk
         run: |
+          export ANDROID_HOME=$HOME/android-sdk
+          export PATH=$ANDROID_HOME/platform-tools:$PATH
           scons platform=android target=release android_arch=arm64v8 -j$(nproc)
 
       - name: Export Project Heartbeat APK
