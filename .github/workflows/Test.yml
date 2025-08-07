@@ -19,16 +19,17 @@ jobs:
           distribution: 'temurin'
           java-version: 17
 
-      - name: Install Android SDK (Command Line Tools Only)
+      - name: Install Android SDK + Build Tools
         uses: android-actions/setup-android@v3
         with:
+          cmdline-tools-version: 11076708 # latest stable
           packages: |
             platform-tools
             platforms;android-33
             build-tools;33.0.2
 
       - name: Accept Android SDK Licenses
-        run: yes | sdkmanager --licenses
+        run: yes | sdkmanager --licenses || true
 
       - name: Install build tools
         run: sudo apt-get update && sudo apt-get install -y build-essential scons zip
