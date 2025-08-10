@@ -1,4 +1,4 @@
-name: Export Project Heartbeat Android APK
+name: Export Project Heartbeat to Android
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-export-android:
+  build-android:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,12 +19,12 @@ jobs:
           distribution: 'temurin'
           java-version: 17
 
-      - name: Install dependencies
+      - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip scons zip build-essential
+          sudo apt-get install -y wget unzip scons zip build-essential procps
 
-      - name: Install Android SDK manually
+      - name: Install Android SDK
         run: |
           mkdir -p $HOME/android-sdk
           cd $HOME/android-sdk
@@ -36,14 +36,17 @@ jobs:
           export ANDROID_HOME=$HOME/android-sdk
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
           yes | cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses
-          cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+          cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME \
+            "platform-tools" \
+            "platforms;android-33" \
+            "build-tools;33.0.2"
 
-      - name: Build Shinobu Engine (Android)
+      - name: Build Shinobu Engine for Android (ARM64)
         env:
           ANDROID_HOME: $HOME/android-sdk
           PATH: $HOME/android-sdk/platform-tools:$HOME/android-sdk/cmdline-tools/latest/bin:$PATH
         run: |
-          scons platform=android target=release android_arch=arm64v8 -j$(getconf _NPROCESSORS_ONLN)
+          scons platform=android target=release android_arch=arm64v8 -j4
 
       - name: Export Project Heartbeat APK
         env:
@@ -55,8 +58,8 @@ jobs:
             --headless \
             --export-release "Android" build/android/ProjectHeartbeat.apk
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Project-Heartbeat-Android-APK
+          name: Project-Heartbeat-Android
           path: build/android/ProjectHeartbeat.apk
