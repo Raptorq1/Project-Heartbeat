@@ -20,7 +20,9 @@ jobs:
           java-version: 17
 
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y wget unzip scons zip build-essential
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip scons zip build-essential
 
       - name: Install Android SDK manually
         run: |
@@ -41,7 +43,7 @@ jobs:
           ANDROID_HOME: $HOME/android-sdk
           PATH: $HOME/android-sdk/platform-tools:$HOME/android-sdk/cmdline-tools/latest/bin:$PATH
         run: |
-          scons platform=android target=release android_arch=arm64v8 -j$(nproc)
+          scons platform=android target=release android_arch=arm64v8 -j$(getconf _NPROCESSORS_ONLN)
 
       - name: Export Project Heartbeat APK
         env:
