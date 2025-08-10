@@ -1,8 +1,9 @@
-name: Export Project Heartbeat to Android
+name: Build and Export Project Heartbeat Android APK
 
 on:
   push:
     branches: [ main ]
+  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -13,46 +14,51 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Java (JDK 17)
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: 17
 
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip scons zip build-essential procps
+          sudo apt-get install -y wget unzip scons zip build-essential procps python3
 
-      - name: Install Android SDK
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: latest
+          accept-android-sdk-licenses: true
+          packages: |
+            platform-tools
+            platforms;android-33
+            build-tools;33.0.2
+            ndk;25.2.9519653
+
+      - name: Get Shinobu Engine
         run: |
-          mkdir -p $HOME/android-sdk
-          cd $HOME/android-sdk
-          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-          unzip cmdline-tools.zip -d temp
-          mkdir -p cmdline-tools/latest
-          mv temp/cmdline-tools/* cmdline-tools/latest/
-          rm -rf temp
-          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
-          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk --licenses
-          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk \
-            "platform-tools" \
-            "platforms;android-33" \
-            "build-tools;33.0.2"
+          if [ ! -d "shinobu" ]; then
+            git clone https://github.com/Raptorq1/shinobu.git
+          fi
 
       - name: Build Shinobu Engine for Android (ARM64)
-        run: scons platform=android target=release android_arch=arm64v8 -j4
+        run: |
+          cd shinobu
+          scons platform=android target=release android_arch=arm64v8 -j4
 
       - name: Export Project Heartbeat APK
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          PATH: ${{ env.PATH }}
         run: |
           mkdir -p build/android
-          ./bin/godot.android.opt.arm64v8 \
+          ./shinobu/bin/godot.android.opt.arm64v8 \
             --headless \
             --export-release "Android" build/android/ProjectHeartbeat.apk
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Project-Heartbeat-Android
+          name: Project-Heartbeat-Android-APK
           path: build/android/ProjectHeartbeat.apk
