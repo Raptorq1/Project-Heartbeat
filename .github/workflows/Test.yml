@@ -19,13 +19,10 @@ jobs:
           distribution: 'temurin'
           java-version: 17
 
-      - name: Install build dependencies
+      - name: Install build dependencies + Android SDK
         run: |
           sudo apt-get update
           sudo apt-get install -y wget unzip scons zip build-essential procps
-
-      - name: Install Android SDK
-        run: |
           mkdir -p $HOME/android-sdk
           cd $HOME/android-sdk
           wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
