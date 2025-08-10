@@ -19,10 +19,13 @@ jobs:
           distribution: 'temurin'
           java-version: 17
 
-      - name: Install build dependencies + Android SDK
+      - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y wget unzip scons zip build-essential procps
+
+      - name: Install Android SDK
+        run: |
           mkdir -p $HOME/android-sdk
           cd $HOME/android-sdk
           wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
@@ -30,25 +33,18 @@ jobs:
           mkdir -p cmdline-tools/latest
           mv temp/cmdline-tools/* cmdline-tools/latest/
           rm -rf temp
-          export ANDROID_HOME=$HOME/android-sdk
-          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-          yes | cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses
-          cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME \
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
+          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk --licenses
+          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk \
             "platform-tools" \
             "platforms;android-33" \
             "build-tools;33.0.2"
 
       - name: Build Shinobu Engine for Android (ARM64)
-        env:
-          ANDROID_HOME: $HOME/android-sdk
-          PATH: $HOME/android-sdk/platform-tools:$HOME/android-sdk/cmdline-tools/latest/bin:$PATH
-        run: |
-          scons platform=android target=release android_arch=arm64v8 -j4
+        run: scons platform=android target=release android_arch=arm64v8 -j4
 
       - name: Export Project Heartbeat APK
-        env:
-          ANDROID_HOME: $HOME/android-sdk
-          PATH: $HOME/android-sdk/platform-tools:$HOME/android-sdk/cmdline-tools/latest/bin:$PATH
         run: |
           mkdir -p build/android
           ./bin/godot.android.opt.arm64v8 \
