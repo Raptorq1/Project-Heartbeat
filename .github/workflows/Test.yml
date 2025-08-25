@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Download Shinobu Engine v0.13
         run: |
@@ -30,7 +30,7 @@ jobs:
           ./shinobu_engine/ShinobuEngine-headless --headless --export-release "Android" build/android/ProjectHeartbeat.apk
 
       - name: Upload APK
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: ProjectHeartbeat-APK
           path: build/android/ProjectHeartbeat.apk
