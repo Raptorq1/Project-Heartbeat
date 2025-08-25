@@ -12,11 +12,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install Godot (Shinobu)
+      - name: Download Shinobu Engine v0.13
         run: |
-          wget https://github.com/Project-Heartbeat/ShinobuEngine/releases/download/v3.5.2-shinobu/godot-linux-headless.64.zip -O godot.zip
-          unzip godot.zip -d godot
-          chmod +x godot/godot*
+          wget https://github.com/EIRTeam/shinobu/releases/download/0.13/engine.zip -O engine.zip
+          unzip engine.zip -d shinobu_engine
+          chmod +x shinobu_engine/*
 
       - name: Setup Android SDK & NDK
         uses: android-actions/setup-android@v2
@@ -26,7 +26,8 @@ jobs:
       - name: Export APK
         run: |
           mkdir -p build/android
-          ./godot/godot* --headless --export-release "Android" build/android/ProjectHeartbeat.apk
+          # Use the Shinobu headless binary for export
+          ./shinobu_engine/ShinobuEngine-headless --headless --export-release "Android" build/android/ProjectHeartbeat.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v3
