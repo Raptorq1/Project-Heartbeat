@@ -68,7 +68,8 @@ class DSCImporter:
 		FT,
 		DT,
 		F,
-		F2
+		F2,
+		NC
 	}
 	
 	const DSC_LOADER = preload("res://autoloads/song_loader/song_loaders/DSCConverter.gd")
@@ -85,6 +86,7 @@ class DSCImporter:
 		options_button.add_item("Dreamy Theater")
 		options_button.add_item("F/X")
 		options_button.add_item("F2nd")
+		options_button.add_item("New Classics Mod")
 		
 		add_child(options_button)
 	
@@ -99,13 +101,12 @@ class DSCImporter:
 				game = "F/X"
 			DSC_OPTIONS.F2:
 				game = "F2nd"
+			DSC_OPTIONS.NC:
+				game = "New Classics Mod"
 		
 		return ["*.dsc ; Project DIVA %s chart" % game]
 	
-	func file_selected(path: String, editor: HBEditor, offset: int, vargs: Dictionary = {}):
-		UserSettings.user_settings.last_dsc_dir = path.get_base_dir()
-		UserSettings.save_user_settings()
-		
+	func get_selected_game() -> String:
 		var game: String
 		match options_button.get_selected_id():
 			DSC_OPTIONS.FT:
@@ -116,10 +117,20 @@ class DSCImporter:
 				game = "f"
 			DSC_OPTIONS.F2:
 				game = "F2"
+			DSC_OPTIONS.NC:
+				game = "NC"
+		
+		return game
+	
+	func file_selected(path: String, editor: HBEditor, offset: int, vargs: Dictionary = {}):
+		UserSettings.user_settings.last_dsc_dir = path.get_base_dir()
+		UserSettings.save_user_settings()
+		
+		var game := get_selected_game()
 		
 		var opcode_map = DSCOpcodeMap.new("res://autoloads/song_loader/song_loaders/dsc_opcode_db.json", game)
 		
-		var result = DSC_LOADER.convert_dsc_to_chart_and_tempo_map(path, opcode_map, offset)
+		var result = DSC_LOADER.convert_dsc_to_chart_and_tempo_map(path, opcode_map, offset, vargs.custom_link_stars)
 		
 		chart = result[0] as HBChart
 		timing_changes = result[1]
@@ -409,7 +420,7 @@ func importer_selected(idx: int):
 	
 	current_importer_idx = idx
 	
-	link_stars_checkbox.visible = (new_importer.name == "F2nd edit")
+	link_stars_checkbox.visible = (new_importer.name == "F2nd edit") or (new_importer.name == "DSC file")
 	tempo_map_hbox_container.visible = (new_importer.name == "MIDI file")
 
 func _on_open_file_button_pressed():
@@ -420,7 +431,7 @@ func _on_file_selected(path: String):
 	var importer = importers[current_importer_idx]
 	
 	var vargs = {}
-	if importer.name == "F2nd edit":
+	if importer.name == "F2nd edit" or importer.name == "DSC file":
 		vargs.custom_link_stars = link_stars_checkbox.button_pressed
 	if importer.name == "MIDI file":
 		vargs.tempo_mode = tempo_map_option_button.get_selected_metadata()
