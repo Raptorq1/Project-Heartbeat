@@ -1,36 +1,55 @@
-name: Build Project Heartbeat APK
+name: Android Build (Project Heartbeat + Shinobu)
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches: [ main ]
+  pull_request:
 
 jobs:
-  export-android:
+  build-android:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout Project Heartbeat
+      uses: actions/checkout@v4
 
-      - name: Download Shinobu Engine v0.13
-        run: |
-          wget https://github.com/EIRTeam/shinobu/releases/download/0.13/engine.zip -O engine.zip
-          unzip engine.zip -d shinobu_engine
-          chmod +x shinobu_engine/*
+    - name: Clone Shinobu Engine
+      run: |
+        git clone https://github.com/EIRTeam/shinobu.git shinobu
 
-      - name: Setup Android SDK & NDK
-        uses: android-actions/setup-android@v2
-        with:
-          cmdline-tools-version: latest
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 17
 
-      - name: Export APK
-        run: |
-          mkdir -p build/android
-          # Use the Shinobu headless binary for export
-          ./shinobu_engine/ShinobuEngine-headless --headless --export-release "Android" build/android/ProjectHeartbeat.apk
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: ProjectHeartbeat-APK
-          path: build/android/ProjectHeartbeat.apk
+    - name: Install Build Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential scons python3 pkg-config unzip
+
+    - name: Build Shinobu for Android
+      working-directory: shinobu
+      run: |
+        # Build for 64-bit ARM (modern Android devices)
+        scons platform=android target=release_debug arch=arm64v8 -j$(nproc) \
+          ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
+
+    - name: Copy Shinobu Templates
+      run: |
+        mkdir -p export/android
+        cp shinobu/bin/android_release_debug_arm64v8.so export/android/
+
+    - name: Build Project Heartbeat APK
+      working-directory: android
+      run: |
+        ./gradlew assembleDebug
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: Project-Heartbeat-Android
+        path: android/build/outputs/apk/debug/*.apk
