@@ -1,9 +1,8 @@
 name: Android Build (Project Heartbeat + Shinobu)
 
+# Manual trigger
 on:
-  push:
-    branches: [ main ]
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   build-android:
@@ -35,16 +34,16 @@ jobs:
       run: |
         sed -i '1i #include <android/log.h>' shinobu/modules/shinobu/thirdparty/miniaudio/miniaudio.h
 
-    - name: Build Shinobu for Android
+    - name: Build Shinobu Export Template for Android
       working-directory: shinobu
       run: |
-        scons platform=android target=release_debug arch=arm64v8 -j$(nproc) \
+        scons platform=android target=template_debug arch=arm64v8 -j$(nproc) \
           ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
 
     - name: List Shinobu Build Output
       run: ls -lh shinobu/bin
 
-    - name: Copy Shinobu Templates
+    - name: Copy Shinobu Export Templates
       run: |
         mkdir -p export/android
         cp shinobu/bin/*.so export/android/
