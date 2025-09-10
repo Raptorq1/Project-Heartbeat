@@ -35,7 +35,7 @@ jobs:
       working-directory: shinobu
       run: |
         # Build for 64-bit ARM (modern Android devices)
-        scons platform=android target=release_debug arch=arm64v8 -j$(nproc) \
+        scons platform=android target=template_debug arch=arm64v8 -j$(nproc) \
           ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
 
     - name: Copy Shinobu Templates
