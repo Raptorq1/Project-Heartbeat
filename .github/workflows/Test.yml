@@ -38,7 +38,7 @@ jobs:
     - name: Build Shinobu for Android
       working-directory: shinobu
       run: |
-        scons platform=android target=release_debug arch=arm64v8 -j$(nproc) \
+        scons platform=android target=template_debug arch=arm64v8 -j$(nproc) \
           ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
 
     - name: Copy Shinobu Templates
