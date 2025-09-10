@@ -3,7 +3,7 @@ name: Android Build (Project Heartbeat + Shinobu)
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
+  pull_request:
 
 jobs:
   build-android:
@@ -31,11 +31,14 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential scons python3 pkg-config unzip
 
+    - name: Patch Miniaudio for Android
+      run: |
+        sed -i '1i #include <android/log.h>' shinobu/modules/shinobu/thirdparty/miniaudio/miniaudio.h
+
     - name: Build Shinobu for Android
       working-directory: shinobu
       run: |
-        # Build for 64-bit ARM (modern Android devices)
-        scons platform=android target=template_debug arch=arm64v8 -j$(nproc) \
+        scons platform=android target=release_debug arch=arm64v8 -j$(nproc) \
           ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
 
     - name: Copy Shinobu Templates
